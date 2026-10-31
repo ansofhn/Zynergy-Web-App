@@ -1,0 +1,82 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { BrandMark } from "@/components/ui/BrandMark";
+import { Avatar } from "./Avatar";
+import { LogoutButton } from "./LogoutButton";
+import { cn } from "@/lib/cn";
+import { roleLabel } from "@/lib/options";
+import { canSeeNav, isNavActive, navSections, type NavViewer } from "./nav";
+import { NavIcon } from "./NavIcon";
+
+export function Sidebar({ viewer, userName, photoUrl }: { viewer: NavViewer; userName: string; photoUrl?: string | null }) {
+  const pathname = usePathname();
+  // Fixed, not sticky: a sticky column shifts at the end of the page whenever the document is taller than its
+  // container (browser extensions, 100vh quirks). Fixed never moves; the layout pads the content column instead.
+  return (
+    <aside className="fixed inset-y-0 left-0 z-20 hidden w-64 flex-col border-r border-line bg-white print:hidden md:flex">
+      <div className="flex h-14 items-center gap-2.5 border-b border-line px-5">
+        <BrandMark className="size-7 text-navy" />
+        <span className="text-base font-extrabold tracking-tight">
+          Zynergy <span className="text-muted">Hub</span>
+        </span>
+      </div>
+      {/* Spacing is tight on purpose: the list must fit a 900px-tall window, or a few leftover pixels make it scroll under the wheel. */}
+      <nav className="flex-1 overflow-y-auto px-3 py-2">
+        {navSections.map((section) => {
+          const items = section.items.filter((i) => canSeeNav(i, viewer));
+          if (items.length === 0) return null;
+          return (
+            <div key={section.title || "top"} className="mb-3 last:mb-0">
+              {section.title && (
+                <p className="mb-0.5 px-2 text-[11px] font-bold uppercase tracking-wider text-muted">
+                  {section.title}
+                </p>
+              )}
+              <ul className="space-y-0.5">
+                {items.map((item) => {
+                  const active = isNavActive(pathname, item.href);
+                  return (
+                    <li key={item.href}>
+                      <Link
+                        href={item.href}
+                        aria-current={active ? "page" : undefined}
+                        className={cn(
+                          "relative flex items-center gap-2.5 rounded-xl px-3 py-1.5 text-sm font-medium transition-colors",
+                          active
+                            ? "bg-primary-soft font-semibold text-primary-dark before:absolute before:left-0 before:top-2 before:h-[calc(100%-1rem)] before:w-[3px] before:rounded-full before:bg-primary"
+                            : "text-ink hover:bg-surface-soft",
+                          item.soon && "text-muted",
+                        )}
+                      >
+                        {/* One pixel down: mixed-case text sits below the line-box centre, so a box-centred icon looks raised. */}
+                        <NavIcon name={item.icon} className="size-4 shrink-0 translate-y-px" />
+                        <span className="flex-1 truncate">{item.label}</span>
+                        {item.soon && (
+                          <span className="rounded-full bg-surface-soft px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-muted">
+                            Segera
+                          </span>
+                        )}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          );
+        })}
+      </nav>
+      <div className="flex items-center gap-3 border-t border-line px-4 py-3">
+        <Link href="/profile" className="flex min-w-0 flex-1 items-center gap-3 rounded-lg hover:text-primary">
+          <Avatar name={userName} src={photoUrl} className="size-8 text-[10px]" />
+          <span className="min-w-0">
+            <span className="block truncate text-sm font-semibold">{userName}</span>
+            <span className="block text-xs text-muted">{roleLabel.get(viewer.role) ?? viewer.role}{viewer.isAdmin ? " · Admin" : ""}</span>
+          </span>
+        </Link>
+        <LogoutButton />
+      </div>
+    </aside>
+  );
+}
